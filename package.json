@@ -1,0 +1,275 @@
+{
+  "name": "lory",
+  "displayName": "Lory",
+  "description": "Lorikeet Security's AI reviewer points out vulnerabilities in your code as you write it.",
+  "version": "0.1.0",
+  "publisher": "lorikeet-security",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#0a1628",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "security",
+    "sast",
+    "vulnerability",
+    "owasp",
+    "cwe",
+    "appsec",
+    "code review",
+    "lorikeet",
+    "lory"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lorikeet-Security/vs-code.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lorikeet-Security/vs-code/issues"
+  },
+  "homepage": "https://lorikeetsecurity.com",
+  "qna": false,
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "lory.scanFile",
+        "title": "Scan Active File",
+        "category": "Lory",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "lory.scanSelection",
+        "title": "Scan Selection",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.clearFile",
+        "title": "Clear Findings in Active File",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.clearAll",
+        "title": "Clear All Findings",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.toggleAutoScan",
+        "title": "Toggle Scan While Typing",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.showOutput",
+        "title": "Show Log",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.resetConsent",
+        "title": "Reset Code-Sharing Consent",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.setToken",
+        "title": "Set Access Token",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.clearToken",
+        "title": "Clear Access Token",
+        "category": "Lory"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "lory.scanSelection",
+          "when": "editorHasSelection",
+          "group": "1_modification@100"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "lory.scanFile",
+          "when": "lory.canScan",
+          "group": "navigation@100"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Lory",
+      "properties": {
+        "lory.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Lory security review.",
+          "scope": "resource"
+        },
+        "lory.baseUrl": {
+          "type": "string",
+          "default": "https://lorikeetsecurity.com",
+          "markdownDescription": "Base URL of the Lorikeet Security platform. Change this only to point at a self-hosted or development instance.",
+          "scope": "machine"
+        },
+        "lory.scanOn": {
+          "type": "string",
+          "enum": [
+            "type",
+            "save",
+            "manual"
+          ],
+          "enumDescriptions": [
+            "Review shortly after you stop typing, and on save.",
+            "Review only when the file is saved.",
+            "Review only when you run the Lory: Scan Active File command."
+          ],
+          "default": "type",
+          "description": "When Lory reviews your code.",
+          "scope": "resource"
+        },
+        "lory.debounceMs": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 400,
+          "maximum": 15000,
+          "description": "How long to wait after the last keystroke before reviewing, in milliseconds.",
+          "scope": "resource"
+        },
+        "lory.minimumSeverity": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "info"
+          ],
+          "default": "low",
+          "description": "Hide findings below this severity.",
+          "scope": "resource"
+        },
+        "lory.minimumConfidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "default": "low",
+          "description": "Hide findings Lory is less sure about. 'high' shows only defects visible in the reviewed lines.",
+          "scope": "resource"
+        },
+        "lory.languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "javascript",
+            "javascriptreact",
+            "typescript",
+            "typescriptreact",
+            "python",
+            "php",
+            "go",
+            "java",
+            "csharp",
+            "ruby",
+            "rust",
+            "c",
+            "cpp",
+            "kotlin",
+            "swift",
+            "scala",
+            "shellscript",
+            "powershell",
+            "sql",
+            "yaml",
+            "terraform",
+            "dockerfile",
+            "html",
+            "vue",
+            "svelte"
+          ],
+          "description": "Language identifiers Lory reviews. Remove one to stop reviewing it.",
+          "scope": "resource"
+        },
+        "lory.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/vendor/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/out/**",
+            "**/.git/**",
+            "**/*.min.js",
+            "**/*.lock",
+            "**/__snapshots__/**"
+          ],
+          "description": "Glob patterns Lory never sends. Files matching any pattern are skipped entirely.",
+          "scope": "resource"
+        },
+        "lory.maxFileLines": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 50,
+          "maximum": 1600,
+          "description": "Files longer than this are not reviewed whole. Use Lory: Scan Selection on the part you care about.",
+          "scope": "resource"
+        },
+        "lory.stream": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show each finding as it arrives instead of waiting for the full review.",
+          "scope": "resource"
+        },
+        "lory.timeoutMs": {
+          "type": "number",
+          "default": 60000,
+          "minimum": 5000,
+          "maximum": 180000,
+          "description": "Give up on a review after this long, in milliseconds.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run check && npm run build -- --minify",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "check": "tsc --noEmit && eslint src --ext ts",
+    "lint": "eslint src --ext ts",
+    "test": "node --test --experimental-strip-types \"src/*.test.ts\"",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.5.0",
+    "@typescript-eslint/parser": "^7.5.0",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.2",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.3"
+  },
+  "allowScripts": {
+    "esbuild@0.20.2": true
+  }
+}

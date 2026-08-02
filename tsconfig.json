@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "rootDir": "src",
+    // esbuild produces dist/extension.js; tsc is only ever a typechecker here.
+    "noEmit": true,
+    "sourceMap": true,
+    // Tests run straight off the .ts through node --test --experimental-strip-types,
+    // whose ESM resolver needs the extension spelled out. esbuild does the emit,
+    // so tsc is typecheck-only and this stays legal.
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "out"]
+}

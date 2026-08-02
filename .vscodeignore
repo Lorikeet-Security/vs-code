@@ -1,0 +1,19 @@
+# The VSIX ships the bundle and the docs, nothing else. `dist/extension.js` is
+# self-contained, so sources, tests, and the toolchain are all excluded.
+.vscode/**
+.github/**
+node_modules/**
+src/**
+out/**
+images/screenshots/**
+
+esbuild.js
+tsconfig.json
+.eslintrc.json
+.gitignore
+.vscodeignore
+package-lock.json
+
+**/*.map
+**/*.ts
+**/.eslintrc.json

@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  # Tagging v* builds and uploads the VSIX. Publishing to the Marketplace stays
+  # a deliberate manual step (npm run publish) until the extension leaves alpha.
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+
+      - name: Package
+        run: npx vsce package --no-dependencies --out lory.vsix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: lory.vsix
