@@ -1,0 +1,46 @@
+name: Publish to Visual Studio Marketplace
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      bump_version:
+        description: 'Version bump type (patch, minor, major, or exact version like 0.1.1)'
+        required: false
+        default: 'none'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Checks & Tests
+        run: |
+          npm run check
+          npm test
+          npm run build -- --minify
+
+      - name: Publish to VS Code Marketplace
+        run: |
+          npx @vscode/vsce publish --no-dependencies -p ${{ secrets.VS_MARKETPLACE_TOKEN }}
+        env:
+          VS_MARKETPLACE_TOKEN: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+
+      - name: Publish to Open VSX Registry (Optional)
+        if: env.OVSX_PAT != ''
+        run: |
+          npx ovsx publish --no-dependencies -p ${{ secrets.OVSX_PAT }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
