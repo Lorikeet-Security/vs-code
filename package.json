@@ -3,7 +3,7 @@
   "displayName": "Lory",
   "description": "Lorikeet Security's AI reviewer points out vulnerabilities in your code as you write it.",
   "version": "0.1.0",
-  "publisher": "lorikeet-security",
+  "publisher": "LorikeetSecurity",
   "license": "MIT",
   "icon": "images/icon.png",
   "galleryBanner": {
