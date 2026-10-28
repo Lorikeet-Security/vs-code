@@ -2,7 +2,7 @@
   "name": "lory",
   "displayName": "Lory",
   "description": "Lorikeet Security's real-time AI security analyst detects vulnerabilities as you write code. Requires an active Lorikeet Security subscription or API token.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "LorikeetSecurity",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -51,6 +51,12 @@
         "icon": "$(shield)"
       },
       {
+        "command": "lory.scanWorkspace",
+        "title": "Scan Workspace for Security Vulnerabilities",
+        "category": "Lory",
+        "icon": "$(shield)"
+      },
+      {
         "command": "lory.scanSelection",
         "title": "Scan Selection",
         "category": "Lory"
@@ -63,7 +69,8 @@
       {
         "command": "lory.clearAll",
         "title": "Clear All Findings",
-        "category": "Lory"
+        "category": "Lory",
+        "icon": "$(clear-all)"
       },
       {
         "command": "lory.toggleAutoScan",
@@ -81,9 +88,16 @@
         "category": "Lory"
       },
       {
+        "command": "lory.login",
+        "title": "Sign In via Lorikeet SSO",
+        "category": "Lory",
+        "icon": "$(sign-in)"
+      },
+      {
         "command": "lory.setToken",
         "title": "Set Access Token",
-        "category": "Lory"
+        "category": "Lory",
+        "icon": "$(key)"
       },
       {
         "command": "lory.clearToken",
@@ -99,8 +113,63 @@
         "command": "lory.subscribe",
         "title": "View Subscription Plans & Pricing",
         "category": "Lory"
+      },
+      {
+        "command": "lory.previewFix",
+        "title": "Preview Fix Diff",
+        "category": "Lory",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "lory.applyFindingFix",
+        "title": "Apply Fix",
+        "category": "Lory",
+        "icon": "$(check)"
+      },
+      {
+        "command": "lory.reportFalsePositive",
+        "title": "Report False Positive",
+        "category": "Lory",
+        "icon": "$(feedback)"
+      },
+      {
+        "command": "lory.refreshFindings",
+        "title": "Refresh Security Findings",
+        "category": "Lory",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lory.scanAsset",
+        "title": "Scan This File",
+        "category": "Lory",
+        "icon": "$(shield)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lory-security",
+          "title": "Lory Security",
+          "icon": "images/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "lory-security": [
+        {
+          "id": "lory.findingsView",
+          "name": "Open Findings"
+        },
+        {
+          "id": "lory.assetsView",
+          "name": "Scanned Assets & Files"
+        },
+        {
+          "id": "lory.accountView",
+          "name": "Account & Subscription"
+        }
+      ]
+    },
     "menus": {
       "editor/context": [
         {
@@ -114,6 +183,73 @@
           "command": "lory.scanFile",
           "when": "lory.canScan",
           "group": "navigation@100"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "lory.scanWorkspace",
+          "when": "view == lory.findingsView || view == lory.assetsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "lory.refreshFindings",
+          "when": "view == lory.findingsView || view == lory.assetsView || view == lory.accountView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "lory.clearAll",
+          "when": "view == lory.findingsView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "lory.login",
+          "when": "view == lory.accountView",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lory.previewFix",
+          "when": "viewItem == loryFindingWithFix",
+          "group": "1_fix@1"
+        },
+        {
+          "command": "lory.applyFindingFix",
+          "when": "viewItem == loryFindingWithFix",
+          "group": "1_fix@2"
+        },
+        {
+          "command": "lory.explainFinding",
+          "when": "viewItem == loryFinding || viewItem == loryFindingWithFix",
+          "group": "2_explain@1"
+        },
+        {
+          "command": "lory.reportFalsePositive",
+          "when": "viewItem == loryFinding || viewItem == loryFindingWithFix",
+          "group": "3_feedback@1"
+        },
+        {
+          "command": "lory.scanAsset",
+          "when": "viewItem == loryScannedAsset",
+          "group": "1_scan"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "lory.previewFix",
+          "when": "false"
+        },
+        {
+          "command": "lory.applyFindingFix",
+          "when": "false"
+        },
+        {
+          "command": "lory.reportFalsePositive",
+          "when": "false"
+        },
+        {
+          "command": "lory.scanAsset",
+          "when": "false"
         }
       ]
     },

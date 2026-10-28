@@ -39,7 +39,11 @@ export class Analyzer implements vscode.Disposable {
   private readonly reviewed = new Map<string, string>();
   /** Document key -> findings currently displayed, for the code action provider. */
   private readonly anchored = new Map<string, AnchoredFinding[]>();
+  private readonly scannedFiles = new Set<string>();
   private readonly listeners = new Set<StateListener>();
+  private readonly onFindingsChangedEmitter = new vscode.EventEmitter<void>();
+  /** Fires whenever any finding is added, updated, or cleared. */
+  readonly onDidChangeFindings = this.onFindingsChangedEmitter.event;
   /** Error kinds already surfaced, so a background retry loop cannot spam toasts. */
   private readonly warned = new Set<string>();
   private state: ScanState = { status: 'idle', counts: {} };
@@ -280,6 +284,39 @@ export class Analyzer implements vscode.Disposable {
 
     this.anchored.set(key(document), anchoredFindings);
     this.diagnostics.set(document.uri, diagnostics);
+    this.scannedFiles.add(key(document));
+    this.onFindingsChangedEmitter.fire();
+  }
+
+  /**
+   * Apply findings for a document scanned during workspace scan.
+   */
+  applyWorkspaceScanResult(
+    document: vscode.TextDocument,
+    findings: Finding[],
+    config: LoryConfig
+  ): void {
+    const id = key(document);
+    this.scannedFiles.add(id);
+    this.render(document, findings, config);
+  }
+
+  getAllFindings(): Map<string, AnchoredFinding[]> {
+    return new Map(this.anchored);
+  }
+
+  getScannedFiles(): string[] {
+    return Array.from(this.scannedFiles);
+  }
+
+  getAggregateFindingCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const findings of this.anchored.values()) {
+      for (const { finding } of findings) {
+        counts[finding.severity] = (counts[finding.severity] ?? 0) + 1;
+      }
+    }
+    return counts;
   }
 
   private countsFor(document: vscode.TextDocument): Record<string, number> {
@@ -315,7 +352,9 @@ export class Analyzer implements vscode.Disposable {
     this.diagnostics.delete(document.uri);
     this.anchored.delete(id);
     this.reviewed.delete(id);
+    this.scannedFiles.delete(id);
     this.refreshState(document);
+    this.onFindingsChangedEmitter.fire();
   }
 
   clearAll(): void {
@@ -330,7 +369,9 @@ export class Analyzer implements vscode.Disposable {
     this.diagnostics.clear();
     this.anchored.clear();
     this.reviewed.clear();
+    this.scannedFiles.clear();
     this.publishState({ status: 'idle', counts: {} });
+    this.onFindingsChangedEmitter.fire();
   }
 
   /** Forget cached hashes so the next scan re-reviews. Used when settings change. */
@@ -382,6 +423,7 @@ export class Analyzer implements vscode.Disposable {
     this.clearAll();
     this.diagnostics.dispose();
     this.listeners.clear();
+    this.onFindingsChangedEmitter.dispose();
   }
 }
 
@@ -402,7 +444,7 @@ function basename(uri: vscode.Uri): string {
  */
 function hashOf(text: string, startLine: number, config: LoryConfig): string {
   return createHash('sha256')
-    .update(`${startLine} ${config.minimumSeverity} ${config.minimumConfidence} `)
+    .update(`${startLine} ${config.minimumSeverity} ${config.minimumConfidence} `)
     .update(text)
     .digest('hex');
 }

@@ -14,7 +14,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-production-20c997" alt="production">
-  <img src="https://img.shields.io/badge/release-v1.0.0-ba5663" alt="v1.0.0">
+  <img src="https://img.shields.io/badge/release-v1.1.0-ba5663" alt="v1.1.0">
   <img src="https://img.shields.io/badge/vscode-%5E1.85-007acc" alt="vscode ^1.85">
   <img src="https://img.shields.io/badge/license-MIT-20c997" alt="MIT">
 </p>
@@ -91,11 +91,43 @@ request, and neither does switching tabs and back.
 
 | | |
 |---|---|
-| **See a finding** | Hover the squiggle, or open the Problems panel. |
-| **Fix it** | `Ctrl/Cmd + .` on the line, then *Lory: apply fix*. |
+| **Activity Bar** | Click the **Lory Security** icon in the Activity Bar to browse open findings, scanned assets, and account status. |
+| **Workspace Scan** | Run `Lory: Scan Workspace for Security Vulnerabilities` from the Command Palette or the Activity Bar toolbar. |
+| **See a finding** | Hover the squiggle, check the Problems panel, or navigate via the Lory Security TreeView. |
+| **Preview a fix** | `Ctrl/Cmd + .` on the line, then *Lory: preview fix diff*. Opens side-by-side comparison before applying. |
+| **Apply a fix** | `Ctrl/Cmd + .`, then *Lory: apply fix*. |
 | **Understand it** | `Ctrl/Cmd + .`, then *Lory: explain*. Opens the full write-up with the CWE reference. |
+| **Report False Positive** | `Ctrl/Cmd + .`, then *Lory: report false positive*. Submits rationale directly to the triage queue. |
 | **Silence it** | `Ctrl/Cmd + .`, then *Lory: ignore this finding*. Inserts a `lory-ignore` comment. |
 | **Review a fragment** | Select the lines, right click, *Lory: Scan Selection*. Use this on files too large to review whole. |
+
+### Dedicated Activity Bar (Lory Security)
+
+Lory features a dedicated Activity Bar view container with three specialized trees:
+- **Open Findings**: Categorized by severity (**Critical**, **High**, **Medium**, **Low**, **Info**). Click any finding to jump directly to the target line in the editor.
+- **Scanned Assets & Files**: Real-time project inventory showing review state (**Clean ✓** or count of vulnerabilities).
+- **Account & Subscription**: Real-time authentication status, organization profile, active tier, and one-click actions.
+
+### Repository Policies (`.loryignore` and `.lorikeet.json`)
+
+Lory automatically honors policy files committed to your workspace root:
+- **`.loryignore`**: Specify file patterns to exclude from reviews (using `.gitignore` syntax with `#` comments and globs).
+- **`.lorikeet.json`**: Mirror team CLI configurations across developers:
+  ```json
+  {
+    "exclude": ["dist/**", "fixtures/**"],
+    "languages": ["typescript", "python", "go"],
+    "minimumSeverity": "medium",
+    "minimumConfidence": "low"
+  }
+  ```
+
+### Authentication & Single Sign-On (SSO)
+
+Lory connects to your active Lorikeet Security subscription using secure loopback OAuth 2.1 or access tokens:
+- **One-Click In-IDE Sign In**: Run **`Lory: Sign In via Lorikeet SSO`**. Spawns a local loopback server (`127.0.0.1:54321`), opens your browser to authorize Talon SSO, and saves your token automatically.
+- **Manual Token Entry**: Run **`Lory: Set Access Token`** and paste an `lkmcp_...` token issued from your [MCP Server Settings](https://lorikeetsecurity.com/talon/dashboard/mcp).
+- **Secure SecretStorage**: Tokens and credentials are stored in VS Code's encrypted OS keychain, never written in plaintext `settings.json`.
 
 ### Ignore comments
 
@@ -192,13 +224,20 @@ The logic worth testing is deliberately free of `vscode` imports — [src/glob.t
 
 | | |
 |---|---|
-| [src/extension.ts](src/extension.ts) | Activation, commands, event wiring |
-| [src/analyzer.ts](src/analyzer.ts) | Debounce, cache, cancellation, rendering |
+| [src/extension.ts](src/extension.ts) | Activation, commands, TreeView & provider wiring |
+| [src/analyzer.ts](src/analyzer.ts) | Debounce, cache, cancellation, rendering, aggregate metrics |
+| [src/workspace.ts](src/workspace.ts) | Workspace crawler, concurrency pool, multi-file batch reviewer |
+| [src/treeview.ts](src/treeview.ts) | Dedicated Activity Bar TreeViews: Findings, Assets, Account |
+| [src/auth.ts](src/auth.ts) | In-IDE loopback SSO authentication server and token storage |
+| [src/pkce.ts](src/pkce.ts) | RFC 7636 PKCE generator, CSRF state, and token exchange |
+| [src/policy.ts](src/policy.ts) | .loryignore and .lorikeet.json policy parsers |
+| [src/policyStore.ts](src/policyStore.ts) | Workspace policy file watcher and cache |
+| [src/diff.ts](src/diff.ts) | Interactive side-by-side fix diff preview and triage reporter |
 | [src/client.ts](src/client.ts) | HTTP and streaming against the review endpoint |
 | [src/sse.ts](src/sse.ts) | Server-sent event parsing |
 | [src/diagnostics.ts](src/diagnostics.ts) | Findings to diagnostics, anchoring, suppression |
-| [src/actions.ts](src/actions.ts) | Quick fixes |
-| [src/config.ts](src/config.ts) | Settings, filters, scan eligibility |
+| [src/actions.ts](src/actions.ts) | Code actions: quick fixes, diff preview, FP report |
+| [src/config.ts](src/config.ts) | Settings, filters, scan eligibility, policy integration |
 | [src/glob.ts](src/glob.ts) | Exclusion matching |
 
 ### Server side

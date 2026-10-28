@@ -6,6 +6,21 @@ All notable changes to this extension are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-28
+
+Major enterprise feature release closing benchmark capabilities against commercial AppSec extensions.
+
+### Added
+- **Workspace & Multi-File Scanning**: Added `lory.scanWorkspace` command to crawl and batch-review repository files with concurrency pooling (3–5 workers) and aggregate progress reporting.
+- **Dedicated Activity Bar Container**: Registered the `Lory Security` view container in the VS Code Activity Bar with three comprehensive views:
+  - **Open Findings**: Categorized by severity (Critical, High, Medium, Low, Info) with line anchoring, CWE badges, and click-to-navigate.
+  - **Scanned Assets & Files**: Project asset inventory displaying review status (Clean ✓ or vulnerability count).
+  - **Account & Subscription**: Live display of account status, active plan, user email, and quick-action authentication controls.
+- **Seamless In-IDE SSO OAuth Authentication**: Added `lory.login` command executing an ephemeral loopback OAuth listener (`127.0.0.1:54321` with dynamic port fallback) with PKCE and CSRF defense matching `lory login`.
+- **Side-by-Side Diff Preview**: Introduced `lory.previewFix` to preview AI suggested fixes in VS Code's native diff editor before applying changes.
+- **Policy & Ignore File Support**: Automatic parsing of `.loryignore` and `.lorikeet.json` configuration files in workspace roots, mirroring `lory-cli` policy rules.
+- **False Positive Reporting**: Added `lory.reportFalsePositive` quick fix and TreeView action routing feedback directly to the Lorikeet PTaaS triage queue.
+
 ## [1.0.0] - 2026-10-28
 
 Production release. Deprecates the unauthenticated free tier and requires an active Lorikeet Security account with a valid access token or commercial subscription.

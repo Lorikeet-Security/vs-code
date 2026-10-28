@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { matchesAny } from './glob.ts';
+import type { PolicyStore } from './policyStore.ts';
 import {
   CONFIDENCE_RANK,
   SEVERITY_RANK,
@@ -27,27 +28,45 @@ export interface LoryConfig {
   timeoutMs: number;
 }
 
+let activePolicyStore: PolicyStore | undefined;
+
+export function setActivePolicyStore(store: PolicyStore | undefined): void {
+  activePolicyStore = store;
+}
+
 /**
  * Read settings for a specific document.
  *
  * Scoped per resource so a monorepo can review its services and ignore its
- * generated clients through folder-level settings.
+ * generated clients through folder-level settings. Merges VS Code settings
+ * with repository-level `.loryignore` and `.lorikeet.json` policy files.
  */
-export function readConfig(scope?: vscode.Uri): LoryConfig {
+export function readConfig(scope?: vscode.Uri, policyStore?: PolicyStore): LoryConfig {
+  const store = policyStore ?? activePolicyStore;
   const c = vscode.workspace.getConfiguration('lory', scope ?? null);
+  const jsonCfg = store?.getJsonConfig(scope) ?? {};
+  const ignorePatterns = store?.getIgnorePatterns(scope) ?? [];
 
-  const severity = c.get<string>('minimumSeverity', 'low');
-  const confidence = c.get<string>('minimumConfidence', 'low');
+  const rawSeverity = jsonCfg.minimumSeverity ?? c.get<string>('minimumSeverity', 'low');
+  const rawConfidence = jsonCfg.minimumConfidence ?? c.get<string>('minimumConfidence', 'low');
+
+  const baseExclude = c.get<string[]>('exclude', []);
+  const jsonExclude = jsonCfg.exclude ?? [];
+  const combinedExclude = Array.from(
+    new Set([...baseExclude, ...ignorePatterns, ...jsonExclude])
+  );
+
+  const languages = jsonCfg.languages ?? c.get<string[]>('languages', []);
 
   return {
     enable: c.get<boolean>('enable', true),
     baseUrl: c.get<string>('baseUrl', 'https://lorikeetsecurity.com').replace(/\/+$/, ''),
     scanOn: readTrigger(c.get<string>('scanOn', 'type')),
     debounceMs: clamp(c.get<number>('debounceMs', 1500), 400, 15000),
-    minimumSeverity: isSeverity(severity) ? severity : 'low',
-    minimumConfidence: isConfidence(confidence) ? confidence : 'low',
-    languages: c.get<string[]>('languages', []),
-    exclude: c.get<string[]>('exclude', []),
+    minimumSeverity: isSeverity(rawSeverity) ? rawSeverity : 'low',
+    minimumConfidence: isConfidence(rawConfidence) ? rawConfidence : 'low',
+    languages,
+    exclude: combinedExclude,
     // The server refuses more than 1600 lines; clamping here turns a wasted
     // round trip into a local skip with a clear reason.
     maxFileLines: clamp(c.get<number>('maxFileLines', 1500), 50, 1600),
@@ -55,6 +74,7 @@ export function readConfig(scope?: vscode.Uri): LoryConfig {
     timeoutMs: clamp(c.get<number>('timeoutMs', 60000), 5000, 180000),
   };
 }
+
 
 function readTrigger(value: string): ScanTrigger {
   return value === 'save' || value === 'manual' ? value : 'type';

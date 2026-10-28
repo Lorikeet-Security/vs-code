@@ -34,8 +34,10 @@ export class LoryCodeActionProvider implements vscode.CodeActionProvider {
 
       if (finding.fix) {
         actions.push(this.applyFix(document, diagnostic, finding));
+        actions.push(this.previewFix(document, diagnostic, finding));
       }
       actions.push(this.explain(diagnostic, finding));
+      actions.push(this.reportFalsePositive(document, diagnostic, finding));
       actions.push(this.suppressLine(document, diagnostic, finding));
     }
 
@@ -74,6 +76,42 @@ export class LoryCodeActionProvider implements vscode.CodeActionProvider {
       };
     }
 
+    return action;
+  }
+
+  private previewFix(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic,
+    finding: Finding
+  ): vscode.CodeAction {
+    const action = new vscode.CodeAction(
+      `Lory: preview fix diff for ${finding.title}`,
+      vscode.CodeActionKind.QuickFix
+    );
+    action.diagnostics = [diagnostic];
+    action.command = {
+      command: 'lory.previewFix',
+      title: 'Preview Fix Diff',
+      arguments: [document, finding],
+    };
+    return action;
+  }
+
+  private reportFalsePositive(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic,
+    finding: Finding
+  ): vscode.CodeAction {
+    const action = new vscode.CodeAction(
+      `Lory: report false positive for ${finding.title}`,
+      vscode.CodeActionKind.QuickFix
+    );
+    action.diagnostics = [diagnostic];
+    action.command = {
+      command: 'lory.reportFalsePositive',
+      title: 'Report False Positive',
+      arguments: [document, finding],
+    };
     return action;
   }
 

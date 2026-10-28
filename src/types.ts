@@ -119,3 +119,22 @@ export function parseFinding(raw: unknown): Finding | null {
 
   return finding;
 }
+
+export interface AccountInfo {
+  userEmail?: string | undefined;
+  companyName?: string | undefined;
+  companyId?: string | undefined;
+  tier?: string | undefined;
+  token?: string | undefined;
+  authenticatedAt?: string | undefined;
+}
+
+export interface WorkspaceScanSummary {
+  totalFiles: number;
+  filesScanned: number;
+  totalFindings: number;
+  findingsBySeverity: Record<Severity, number>;
+  durationMs: number;
+  errors: number;
+}
+

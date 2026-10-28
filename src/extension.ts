@@ -3,14 +3,36 @@ import * as vscode from 'vscode';
 import { Analyzer } from './analyzer.ts';
 import { LoryCodeActionProvider, explanationMarkdown } from './actions.ts';
 import { LoryClient } from './client.ts';
-import { readConfig, scanBlocker } from './config.ts';
+import { readConfig, scanBlocker, setActivePolicyStore } from './config.ts';
 import { ConsentGate } from './consent.ts';
 import { StatusBar } from './status.ts';
 import { TokenStore } from './token.ts';
+import { PolicyStore } from './policyStore.ts';
+import { WorkspaceScanner } from './workspace.ts';
+import { loginSSO } from './auth.ts';
+import {
+  LoryDiffProvider,
+  FIX_SCHEME,
+  previewFindingFix,
+  applyFixToDocument,
+  reportFalsePositive,
+} from './diff.ts';
+import {
+  LoryFindingsTreeProvider,
+  LoryAssetsTreeProvider,
+  LoryAccountTreeProvider,
+  FindingTreeItem,
+  type AssetTreeItem,
+} from './treeview.ts';
 import type { Finding } from './types.ts';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('Lory', { log: true });
+
+  const policyStore = new PolicyStore();
+  setActivePolicyStore(policyStore);
+  context.subscriptions.push(policyStore, await policyStore.initialise());
+
   const config = readConfig();
 
   const tokens = new TokenStore(context.secrets);
@@ -23,11 +45,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     token: tokens.current(),
   });
 
-  // Setting the token in another window should take effect here without a reload.
+  // Setting the token in another window or via SSO takes effect immediately without a reload.
   context.subscriptions.push(
     tokens.onDidChange((token) => {
       client.update({ token });
-      log.info(token ? 'Access token set.' : 'Access token cleared.');
+      log.info(token ? 'Access token configured.' : 'Access token cleared.');
       const active = vscode.window.activeTextEditor?.document;
       analyzer.refreshState(active);
     })
@@ -36,9 +58,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const consent = new ConsentGate(context.globalState);
   const analyzer = new Analyzer(client, consent, tokens, log);
   const status = new StatusBar();
+  const scanner = new WorkspaceScanner(client, consent, tokens, analyzer, log);
+  const diffProvider = new LoryDiffProvider();
 
-  context.subscriptions.push(log, analyzer, status);
+  context.subscriptions.push(
+    log,
+    analyzer,
+    status,
+    diffProvider,
+    vscode.workspace.registerTextDocumentContentProvider(FIX_SCHEME, diffProvider)
+  );
   context.subscriptions.push(analyzer.onStateChange((state) => status.render(state)));
+
+  // ── TreeView Providers ───────────────────────────────────────────────
+
+  const findingsTreeProvider = new LoryFindingsTreeProvider(analyzer);
+  const assetsTreeProvider = new LoryAssetsTreeProvider(analyzer);
+  const accountTreeProvider = new LoryAccountTreeProvider(tokens);
+
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('lory.findingsView', findingsTreeProvider),
+    vscode.window.registerTreeDataProvider('lory.assetsView', assetsTreeProvider),
+    vscode.window.registerTreeDataProvider('lory.accountView', accountTreeProvider)
+  );
 
   // ── Editor events ────────────────────────────────────────────────────
 
@@ -81,6 +123,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         updateContext(active);
         analyzer.refreshState(active);
       }
+      findingsTreeProvider.refresh();
+      assetsTreeProvider.refresh();
     })
   );
 
@@ -111,6 +155,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await analyzer.scan({ document: editor.document, range: selection, explicit: true });
     }),
 
+    vscode.commands.registerCommand('lory.scanWorkspace', async () => {
+      await scanner.scanWorkspace();
+    }),
+
     vscode.commands.registerCommand('lory.clearFile', () => {
       const document = vscode.window.activeTextEditor?.document;
       if (document) {
@@ -121,6 +169,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('lory.clearAll', () => analyzer.clearAll()),
 
     vscode.commands.registerCommand('lory.showOutput', () => log.show(true)),
+
+    vscode.commands.registerCommand('lory.refreshFindings', () => {
+      findingsTreeProvider.refresh();
+      assetsTreeProvider.refresh();
+      accountTreeProvider.refresh();
+    }),
 
     vscode.commands.registerCommand('lory.toggleAutoScan', async () => {
       const settings = vscode.workspace.getConfiguration('lory');
@@ -142,8 +196,81 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       );
     }),
 
-    vscode.commands.registerCommand('lory.explainFinding', async (finding: Finding) => {
-      await showExplanation(finding);
+    vscode.commands.registerCommand(
+      'lory.explainFinding',
+      async (arg: Finding | FindingTreeItem) => {
+        const finding = arg instanceof FindingTreeItem ? arg.finding : arg;
+        await showExplanation(finding);
+      }
+    ),
+
+    vscode.commands.registerCommand(
+      'lory.previewFix',
+      async (first: vscode.TextDocument | FindingTreeItem, second?: Finding) => {
+        let doc: vscode.TextDocument;
+        let finding: Finding;
+        if (second) {
+          doc = first as vscode.TextDocument;
+          finding = second;
+        } else {
+          const item = first as FindingTreeItem;
+          doc = await vscode.workspace.openTextDocument(item.uri);
+          finding = item.finding;
+        }
+        await previewFindingFix(doc, finding, diffProvider);
+      }
+    ),
+
+    vscode.commands.registerCommand(
+      'lory.applyFindingFix',
+      async (first: vscode.TextDocument | FindingTreeItem, second?: Finding) => {
+        let doc: vscode.TextDocument;
+        let finding: Finding;
+        if (second) {
+          doc = first as vscode.TextDocument;
+          finding = second;
+        } else {
+          const item = first as FindingTreeItem;
+          doc = await vscode.workspace.openTextDocument(item.uri);
+          finding = item.finding;
+        }
+        await applyFixToDocument(doc, finding);
+      }
+    ),
+
+    vscode.commands.registerCommand(
+      'lory.reportFalsePositive',
+      async (first: vscode.TextDocument | FindingTreeItem, second?: Finding) => {
+        let doc: vscode.TextDocument;
+        let finding: Finding;
+        if (second) {
+          doc = first as vscode.TextDocument;
+          finding = second;
+        } else {
+          const item = first as FindingTreeItem;
+          doc = await vscode.workspace.openTextDocument(item.uri);
+          finding = item.finding;
+        }
+        const cfg = readConfig(doc.uri);
+        await reportFalsePositive(doc, finding, cfg.baseUrl, log);
+      }
+    ),
+
+    vscode.commands.registerCommand('lory.scanAsset', async (item: AssetTreeItem) => {
+      const doc = await vscode.workspace.openTextDocument(item.uri);
+      await analyzer.scan({ document: doc, explicit: true });
+    }),
+
+    vscode.commands.registerCommand('lory.login', async () => {
+      const cfg = readConfig();
+      const result = await loginSSO({ baseUrl: cfg.baseUrl, tokenStore: tokens, log });
+      if (result.success && result.account) {
+        void vscode.window.showInformationMessage(
+          `🦜 Authenticated with Lorikeet Security as ${result.account.userEmail} (${result.account.companyName}).`
+        );
+      } else if (!result.success && result.error) {
+        void vscode.window.showErrorMessage(`SSO Authentication failed: ${result.error}`);
+      }
     }),
 
     vscode.commands.registerCommand('lory.setToken', async () => {
