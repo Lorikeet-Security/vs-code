@@ -115,6 +115,12 @@
         "category": "Lory"
       },
       {
+        "command": "lory.explainFinding",
+        "title": "Explain Finding",
+        "category": "Lory",
+        "icon": "$(info)"
+      },
+      {
         "command": "lory.previewFix",
         "title": "Preview Fix Diff",
         "category": "Lory",
@@ -235,6 +241,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "lory.explainFinding",
+          "when": "false"
+        },
         {
           "command": "lory.previewFix",
           "when": "false"
