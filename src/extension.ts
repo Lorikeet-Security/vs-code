@@ -28,11 +28,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     tokens.onDidChange((token) => {
       client.update({ token });
       log.info(token ? 'Access token set.' : 'Access token cleared.');
+      const active = vscode.window.activeTextEditor?.document;
+      analyzer.refreshState(active);
     })
   );
 
   const consent = new ConsentGate(context.globalState);
-  const analyzer = new Analyzer(client, consent, log);
+  const analyzer = new Analyzer(client, consent, tokens, log);
   const status = new StatusBar();
 
   context.subscriptions.push(log, analyzer, status);
@@ -155,7 +157,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('lory.clearToken', async () => {
       await tokens.clear();
       void vscode.window.showInformationMessage(
-        'Lory access token removed. Reviews now use the anonymous rate limit.'
+        'Lory access token removed. Set a new access token to reactivate reviews.'
+      );
+    }),
+
+    vscode.commands.registerCommand('lory.openDashboard', async () => {
+      await vscode.env.openExternal(
+        vscode.Uri.parse('https://lorikeetsecurity.com/talon/dashboard/mcp')
+      );
+    }),
+
+    vscode.commands.registerCommand('lory.subscribe', async () => {
+      await vscode.env.openExternal(
+        vscode.Uri.parse('https://lorikeetsecurity.com/pricing')
       );
     })
   );

@@ -13,7 +13,8 @@
 <p align="center"><strong>Security review while you write, not three weeks after you ship.</strong></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-alpha-db6574" alt="alpha">
+  <img src="https://img.shields.io/badge/status-production-20c997" alt="production">
+  <img src="https://img.shields.io/badge/release-v1.0.0-ba5663" alt="v1.0.0">
   <img src="https://img.shields.io/badge/vscode-%5E1.85-007acc" alt="vscode ^1.85">
   <img src="https://img.shields.io/badge/license-MIT-20c997" alt="MIT">
 </p>
@@ -38,16 +39,22 @@ direct object references, and unsafe framework, container, and cloud configurati
 It deliberately does **not** report style, formatting, naming, or performance. A security
 marker on a style nit teaches you to ignore security markers.
 
-## Install
+## Install & Activation
 
 Search **Lory** in the Extensions view, or:
 
 ```
-ext install lorikeet-security.lory
+ext install LorikeetSecurity.lory
 ```
 
-No account, no API key, no configuration. The first time it wants to review something it
-asks permission, once.
+### Activation & Authentication
+
+Lory requires an active Lorikeet Security subscription or API access token (`lkmcp_...`).
+
+1. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+2. Run **`Lory: Set Access Token`**.
+3. Paste your access token from your [Lorikeet Security MCP Settings](https://lorikeetsecurity.com/talon/dashboard/mcp).
+4. If you don't have a token, subscribe or manage your plan at [Lorikeet Pricing](https://lorikeetsecurity.com/pricing).
 
 ## How it works
 
@@ -153,23 +160,20 @@ reviews and signs.
 for one developer and tight for a team behind one egress address. If you hit it, raise
 `lory.debounceMs`, switch `lory.scanOn` to `save`, or add a token (below).
 
-## Rate limits and access tokens
+## Authentication & Subscription Plans
 
-| Tier | Ceiling | Keyed to |
+Lory operates as a commercial AI security analyst. To protect infrastructure and deliver dedicated compute, an active Lorikeet Security account with a valid subscription or API token is required.
+
+| Account Tier | Features | Capacity |
 |---|---|---|
-| Anonymous | 30 / min | your IP address, shared with everyone behind it |
-| Token | 120 / min | the token, so NAT stops mattering |
+| **Developer / Pro** | Real-time inline security reviews, AST-aware diagnostics, Quick Auto-Fixes | 120 reviews/min |
+| **Enterprise / PTaaS** | Dedicated team quotas, full PTaaS web scanner integration, custom rulesets | Custom / Unlimited |
 
-Run **Lory: Set Access Token** and paste the `lkmcp_…` token from your portal's MCP page.
-
-The token buys throughput and nothing else. This endpoint reads no finding, no
-engagement, and nothing else belonging to your company, so the token grants no data
-access here — it only identifies you well enough to give you your own bucket.
-
-It is stored in VS Code's `SecretStorage`, never in `settings.json`: settings sync
-between machines, get committed to dotfile repos, and are readable by every other
-extension in the window. **Lory: Clear Access Token** removes it and returns you to the
-anonymous tier.
+### Managing Your Credentials
+- Run **Lory: Set Access Token** to save or rotate your token.
+- Tokens are stored securely in VS Code's encrypted `SecretStorage`, never in plaintext `settings.json`.
+- Run **Lory: Open Lorikeet Dashboard & API Keys** to jump directly to your account.
+- Run **Lory: View Subscription Plans & Pricing** to view available upgrades.
 
 ## Development
 

@@ -5,6 +5,7 @@ import { type LoryClient, LoryError } from './client.ts';
 import { passesFilter, readConfig, scanBlocker, type LoryConfig } from './config.ts';
 import { anchor, isSuppressed, toDiagnostic, type AnchoredFinding } from './diagnostics.ts';
 import type { ConsentGate } from './consent.ts';
+import type { TokenStore } from './token.ts';
 import { SEVERITY_RANK, type Finding, type ReviewRequest } from './types.ts';
 
 export interface ScanRequest {
@@ -16,7 +17,7 @@ export interface ScanRequest {
 }
 
 export interface ScanState {
-  status: 'idle' | 'scanning' | 'error' | 'needs-consent';
+  status: 'idle' | 'scanning' | 'error' | 'needs-consent' | 'needs-token';
   message?: string;
   counts: Record<string, number>;
 }
@@ -46,6 +47,7 @@ export class Analyzer implements vscode.Disposable {
   constructor(
     private readonly client: LoryClient,
     private readonly consent: ConsentGate,
+    private readonly tokens: TokenStore,
     private readonly log: vscode.LogOutputChannel
   ) {
     this.diagnostics = vscode.languages.createDiagnosticCollection('lory');
@@ -97,6 +99,29 @@ export class Analyzer implements vscode.Disposable {
     if (blocker) {
       if (explicit) {
         void vscode.window.showInformationMessage(blocker);
+      }
+      return;
+    }
+
+    if (!this.tokens.current()) {
+      this.publishState({
+        status: 'needs-token',
+        message: 'Lory requires an active Lorikeet Security subscription and access token.',
+        counts: {},
+      });
+      if (explicit) {
+        const choice = await vscode.window.showInformationMessage(
+          'Lory requires an active Lorikeet Security access token to review code.',
+          'Set Access Token',
+          'Get Token / Subscribe'
+        );
+        if (choice === 'Set Access Token') {
+          await this.tokens.prompt();
+        } else if (choice === 'Get Token / Subscribe') {
+          await vscode.env.openExternal(
+            vscode.Uri.parse('https://lorikeetsecurity.com/pricing')
+          );
+        }
       }
       return;
     }
@@ -268,6 +293,14 @@ export class Analyzer implements vscode.Disposable {
   /** Recompute the status bar for whichever document is now in front. */
   refreshState(document: vscode.TextDocument | undefined): void {
     if (this.state.status === 'scanning') {
+      return;
+    }
+    if (!this.tokens.current()) {
+      this.publishState({
+        status: 'needs-token',
+        message: 'Lory requires an active Lorikeet Security subscription and access token.',
+        counts: {},
+      });
       return;
     }
     this.publishState({

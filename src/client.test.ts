@@ -41,12 +41,13 @@ const listening = new Promise<number>((resolve) => {
 
 after(() => server.close());
 
-async function client(): Promise<LoryClient> {
+async function client(opts?: { token?: string | undefined }): Promise<LoryClient> {
   const port = await listening;
   return new LoryClient({
     baseUrl: `http://127.0.0.1:${port}`,
     timeoutMs: 5000,
     userAgent: 'lory-vscode/test',
+    token: opts !== undefined ? opts.token : 'lkmcp_test_default_token',
   });
 }
 
@@ -220,11 +221,16 @@ test('an already-aborted signal cancels rather than reporting a transport failur
   );
 });
 
-test('no Authorization header is sent when there is no token', async () => {
-  handler = () => ({ body: JSON.stringify({ success: true, findings: [] }) });
-  const c = await client();
-  await c.review({ code: 'q' }, NEVER_ABORTS);
-  assert.equal(lastRequest.authorization, '', 'anonymous requests must stay anonymous');
+test('reviewing without a token throws an auth error requiring an access token', async () => {
+  const c = await client({ token: undefined });
+  await assert.rejects(
+    () => c.review({ code: 'q' }, NEVER_ABORTS),
+    (err: LoryError) => {
+      assert.equal(err.kind, 'auth');
+      assert.match(err.message, /access token is required/);
+      return true;
+    }
+  );
 });
 
 test('a token is sent as a bearer credential', async () => {
@@ -250,8 +256,10 @@ test('update() swaps the token without rebuilding the client', async () => {
   assert.equal(lastRequest.authorization, 'Bearer lkmcp_rotated00000000');
 
   c.update({ token: undefined });
-  await c.review({ code: 'q' }, NEVER_ABORTS);
-  assert.equal(lastRequest.authorization, '', 'clearing the token drops the header');
+  await assert.rejects(
+    () => c.review({ code: 'q' }, NEVER_ABORTS),
+    (err: LoryError) => err.kind === 'auth'
+  );
 });
 
 test('HTTP 401 is an auth error pointing at the token command', async () => {
@@ -271,34 +279,20 @@ test('HTTP 401 is an auth error pointing at the token command', async () => {
   );
 });
 
-test('a 429 without a token suggests one; with a token it does not', async () => {
+test('a 429 reports rate limit error with retry instructions', async () => {
   handler = () => ({
     status: 429,
     headers: { 'Retry-After': '30', 'X-RateLimit-Limit': '30' },
     body: JSON.stringify({ success: false, error: 'Rate limit exceeded.' }),
   });
 
-  const anon = await client();
+  const c = await client();
   await assert.rejects(
-    () => anon.review({ code: 'q' }, NEVER_ABORTS),
+    () => c.review({ code: 'q' }, NEVER_ABORTS),
     (err: LoryError) => {
+      assert.equal(err.kind, 'rate-limit');
       assert.match(err.message, /30\/min/);
-      assert.match(err.message, /token raises the ceiling/);
-      return true;
-    }
-  );
-
-  const port = await listening;
-  const withToken = new LoryClient({
-    baseUrl: `http://127.0.0.1:${port}`,
-    timeoutMs: 5000,
-    userAgent: 'lory-vscode/test',
-    token: 'lkmcp_abcdefgh12345678',
-  });
-  await assert.rejects(
-    () => withToken.review({ code: 'q' }, NEVER_ABORTS),
-    (err: LoryError) => {
-      assert.doesNotMatch(err.message, /token raises the ceiling/);
+      assert.match(err.message, /30s/);
       return true;
     }
   );
@@ -325,6 +319,7 @@ test('an unreachable host is a transport error', async () => {
     baseUrl: 'http://127.0.0.1:1',
     timeoutMs: 5000,
     userAgent: 'lory-vscode/test',
+    token: 'lkmcp_test_token',
   });
   await assert.rejects(
     () => c.review({ code: 'q' }, NEVER_ABORTS),

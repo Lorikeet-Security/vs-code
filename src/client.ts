@@ -29,11 +29,10 @@ export interface ClientOptions {
   timeoutMs: number;
   userAgent: string;
   /**
-   * Optional `lkmcp_` token.
+   * Required `lkmcp_` token.
    *
-   * Buys a higher rate limit keyed to the token rather than to your IP, which
-   * matters when a team shares one egress address. It unlocks no data: this
-   * endpoint reads nothing belonging to the company.
+   * Connects the editor session to an active Lorikeet Security subscription
+   * and verifies permissions.
    */
   token?: string | undefined;
 }
@@ -69,6 +68,13 @@ export class LoryClient {
     signal: AbortSignal,
     onFinding?: (finding: Finding) => void
   ): Promise<ReviewResult> {
+    if (!this.options.token || this.options.token.trim() === '') {
+      throw new LoryError(
+        'A valid Lorikeet Security access token is required. Run "Lory: Set Access Token" or subscribe at https://lorikeetsecurity.com/pricing.',
+        'auth'
+      );
+    }
+
     const stream = request.stream !== false && onFinding !== undefined;
 
     // A caller-supplied signal cancels on the next keystroke; the timeout signal
@@ -108,8 +114,8 @@ export class LoryClient {
 
     if (response.status === 401) {
       throw new LoryError(
-        'Your Lory token was rejected. Run "Lory: Set Access Token" to replace it, ' +
-          'or clear it to fall back to the anonymous rate limit.',
+        'Your Lorikeet Security access token was rejected, expired, or your subscription is inactive. ' +
+          'Run "Lory: Set Access Token" to update it, or visit https://lorikeetsecurity.com to manage your subscription.',
         'auth'
       );
     }
@@ -117,11 +123,8 @@ export class LoryClient {
       const retry = response.headers.get('retry-after');
       const limit = response.headers.get('x-ratelimit-limit');
       throw new LoryError(
-        `Lory is rate limiting you${limit ? ` (${limit}/min)` : ''}.` +
-          `${retry ? ` Retry in ${retry}s.` : ''}` +
-          (this.options.token
-            ? ''
-            : ' A Lory access token raises the ceiling and keys it to you rather than your IP.'),
+        `Lory rate limit exceeded${limit ? ` (${limit}/min)` : ''}.` +
+          `${retry ? ` Retry in ${retry}s.` : ''} Check your usage at https://lorikeetsecurity.com.`,
         'rate-limit'
       );
     }

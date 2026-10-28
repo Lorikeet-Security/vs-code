@@ -20,6 +20,16 @@ export class StatusBar implements vscode.Disposable {
 
   render(state: ScanState): void {
     switch (state.status) {
+      case 'needs-token':
+        this.item.text = '$(key) Lory: Activate';
+        this.item.tooltip =
+          'Lory requires an active Lorikeet Security access token. Click to set your token.';
+        this.item.command = 'lory.setToken';
+        this.item.backgroundColor = new vscode.ThemeColor(
+          'statusBarItem.warningBackground'
+        );
+        return;
+
       case 'scanning':
         this.item.text = '$(sync~spin) Lory';
         this.item.tooltip = 'Lory is reviewing this file.';

@@ -6,15 +6,14 @@ const SECRET_KEY = 'lory.accessToken';
 const TOKEN_PATTERN = /^lkmcp_[A-Za-z0-9_-]{8,}$/;
 
 /**
- * Storage for the optional `lkmcp_` access token.
+ * Storage for the required Lorikeet Security `lkmcp_` access token.
  *
  * Kept in `SecretStorage` rather than in settings on purpose: `settings.json`
  * is synced, is frequently committed to dotfile repos, and is readable by every
  * other extension in the window. A credential does not belong there.
  *
- * The token is optional. Without one the extension works against the anonymous
- * rate limit; with one the ceiling is higher and keyed to the token instead of
- * to a shared egress IP.
+ * A valid token linked to an active Lorikeet Security account/subscription
+ * is required to activate code reviews and receive AI-backed diagnostics.
  */
 export class TokenStore {
   private readonly onChanged = new vscode.EventEmitter<string | undefined>();
@@ -52,7 +51,7 @@ export class TokenStore {
     const entered = await vscode.window.showInputBox({
       title: 'Lory access token',
       prompt:
-        'Optional. Raises your rate limit and keys it to you rather than to your IP address.',
+        'Required. Connects your editor to your active Lorikeet Security subscription.',
       placeHolder: 'lkmcp_...',
       password: true,
       ignoreFocusOut: true,

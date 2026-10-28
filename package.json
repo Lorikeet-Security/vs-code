@@ -1,8 +1,8 @@
 {
   "name": "lory",
   "displayName": "Lory",
-  "description": "Lorikeet Security's AI reviewer points out vulnerabilities in your code as you write it.",
-  "version": "0.1.0",
+  "description": "Lorikeet Security's real-time AI security analyst detects vulnerabilities as you write code. Requires an active Lorikeet Security subscription or API token.",
+  "version": "1.0.0",
   "publisher": "LorikeetSecurity",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -88,6 +88,16 @@
       {
         "command": "lory.clearToken",
         "title": "Clear Access Token",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.openDashboard",
+        "title": "Open Lorikeet Dashboard & API Keys",
+        "category": "Lory"
+      },
+      {
+        "command": "lory.subscribe",
+        "title": "View Subscription Plans & Pricing",
         "category": "Lory"
       }
     ],

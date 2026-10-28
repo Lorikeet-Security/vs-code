@@ -6,6 +6,18 @@ All notable changes to this extension are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-28
+
+Production release. Deprecates the unauthenticated free tier and requires an active Lorikeet Security account with a valid access token or commercial subscription.
+
+### Changed
+- Enforced authentication: Lory code reviews now require an active Lorikeet Security access token (`lkmcp_...`). Anonymous unauthenticated scanning is no longer supported.
+- Updated status bar to reflect `Activate` / `Sign In` status when no token is present.
+- Updated `Lory: Scan Active File` and `Lory: Scan Selection` to prompt for token configuration or subscription when unauthenticated.
+- Replaced token rate limiting model with subscription-backed identity verification.
+- Added commands `Lory: Open Lorikeet Dashboard & API Keys` and `Lory: View Subscription Plans & Pricing`.
+- Bumped version to `1.0.0` and graduated from alpha status to general production availability.
+
 ## [0.1.0] - 2026-08-02
 
 First alpha. The review loop works end to end; the settings surface may still
@@ -38,5 +50,6 @@ change before 1.0.
 - Rate-limit and rejected-token failures raise a notification at most once until
   the next successful review, so the on-type trigger cannot spam toasts.
 
-[Unreleased]: https://github.com/Lorikeet-Security/vs-code/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Lorikeet-Security/vs-code/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Lorikeet-Security/vs-code/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/Lorikeet-Security/vs-code/releases/tag/v0.1.0
